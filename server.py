@@ -27,7 +27,7 @@ def status():
         global t
         res = t.status[:]
         # Format : [self.LS['front'], self.LS['back'], self.IR['front'], self.IR['right'], self.IR['left'], self.TS, self.SM, self.behavior]
-        res[2], res[3], res[4] = calibrate(res[2] / 1024 * 5.0), calibrate(res[3] / 1024 * 5.0), calibrate(res[4] / 1024 * 5.0) # Convert Voltage to Distance
+        res[2], res[3], res[4] = calibrate(res[2] / 1024 * 5.0), calibrate(res[3] / 1024 * 5.0), calibrate(res[4] / 1024 * 5.0) # map to Voltage and convert to to Distance
         print res
         return jsonify(t.status)
 
