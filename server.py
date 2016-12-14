@@ -24,10 +24,10 @@ def status():
 if __name__ == "__main__":
 
     # Start Turtle Interaction
-    turtle = Turtle(port='/dev/ttyACM1')
+    turtle = Turtle('/dev/ttyACM0', 9600)
     turtle_control = threading.Thread(target = turtle.run)
     turtle_control.setDaemon(True)
     turtle_control.start()
 
-    # Now run the server
+    ## Now run the server
     app.run(host='0.0.0.0', debug=True)

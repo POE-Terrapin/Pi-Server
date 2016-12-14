@@ -83,14 +83,14 @@ class Turtle(object):
         
     def run(self):
         """ Loop that runs the decision algorithm """
-        while True:
+        while self.serial._isOpen:
             if(self.serial.inWaiting()>0):
                 dataRead = self.serial.readline()
                 dataList = dataRead.split(',')
-                if dataList[0] != '' and len(dataList) == 7: # makes sure it is the full set of data to read
+                if dataList[0] != '' and len(dataList) == 8: # makes sure it is the full set of data to read
                     self.assignData(dataList)
                     self.logData()
-                    print(dataRead)
+                    #print(dataRead)
 
                     # Check to see if we need to go to shade
                     enoughLight = self.checkHourlyLight()
@@ -110,20 +110,25 @@ class Turtle(object):
                         eyesYellow = True
                     else:
                         eyesYellow = False
-                        
-                    print(direction)
+                    #print('--->')    
+                    #print(direction)
                     if eyesYellow:
                         direction += 4 # Adds 4 so that the arduino knows to turn the eyes yellow
                     self.serial.write(str(direction))
                                        
                 else:
-                    print(dataRead)
+                    #print(dataRead)
+                    pass
 
     def assignData(self, dataList):
         """ Assigns the data to the proper variables and converts it to floats.
             Data is received as: 'FLS,BLS,FIR,RIR,LIR,TS,SM'. """
         for index in range(len(dataList)):
-            dataList[index] = float(dataList[index])
+            try:
+                dataList[index] = float(dataList[index])
+            except ValueError:
+                print dataList
+                print dataList[index]
 
         self.LS['front'], self.LS['back'] = dataList[0], dataList[1]
         self.IR['front'], self.IR['right'], self.IR['left'] = dataList[2], dataList[3], dataList[4]
@@ -193,7 +198,7 @@ class Turtle(object):
         elif self.inLight == 1: # try to turn around if there is shade behind
             return TURN_RIGHT
         else:
-            return self.checkFoward()
+            return self.checkForward()
         
     def goToLight(self):
         """ Wanders around in the light, turns if it gets into shade. """
