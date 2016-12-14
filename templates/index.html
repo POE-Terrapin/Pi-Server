@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Terrapin Data Visualization Widget</title>
+		<script src="https://code.jquery.com/jquery-2.2.4.js"
+		  integrity="sha256-iT6Q9iMJYuQiMWNd9lDyBUStIq/8PuOW33aOqmvFpqI="
+	crossorigin="anonymous"></script>
+		<script src="{{url_for('static', filename='flot/jquery.flot.js') }}"></script>
+		<script>
+
+			//[self.LS['front'], self.LS['back'], self.IR['front'], self.IR['right'], self.IR['left'], self.TS, self.SM, self.behavior]
+
+			labels = ['ls_f', 'ls_b', 'ir_f', 'ir_r', 'ir_l', 't', 'sm']
+
+			var plot = null;
+
+			var time = []
+			var data = {};
+			var sel = [true, false, false, false, false, false, false]; // default
+
+			var start;
+
+			function now(){
+				return new Date().getTime() / 1000;
+			}
+
+			function update_plot(){
+				plot_data = [];
+				for (i in sel){
+					if(sel[i]){
+						console.log(i);
+						plot_data.push({label : labels[i], data : data[i]});
+					}
+				}
+				plot.setData(plot_data);
+				plot.setupGrid();
+				plot.draw();
+			}
+
+			function posMod(a,b){
+				return ((a%b)+b)%b
+			}
+
+			function get_data(){
+				$SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+				$.post({
+					url : $SCRIPT_ROOT + "/data",
+					dataType : "json",
+					data : {} // no data transmitted
+				}, function(res){
+					t = now() - start;
+
+					// data acquisition
+					for(var i=0; i<7; i++){
+						data[i].push([t, res[i]]);
+						if(data[i].length > 200){
+							data[i].shift()
+						}
+					}
+				});
+
+				// refresh every second-ish
+				update_plot();
+				setTimeout(get_data, 100);
+			}
+
+			$().ready(function(){
+
+				var options = {
+					series: { shadowSize: 0 }, // drawing is faster without shadows
+					xaxis: { show: true }
+				};
+
+				plot = $.plot($("#plot"), [], [] ,options);
+				for(i in labels){ // just indices, don't be confused!
+					data[i] = []
+				}
+
+				start = now();
+				console.log("start", start);
+
+				get_data(); // start getting data
+
+
+				$('input[type=checkbox][name=sel_plot]').change(function(){
+					var idx = labels.indexOf($(this).val());
+					sel[idx] = $(this).is(':checked');
+					update_plot();
+				});
+			});
+		</script>
+
+	</head>
+	<body>
+		<!--<div id="title" -->
+		<div id="plot" style="width:600px; height:300px;"></div>
+		<div id="select">
+			<input type="checkbox" name="sel_plot" value="ls_f" checked>Front Luminosity<br>
+			<input type="checkbox" name="sel_plot" value="ls_b">Back Luminosity<br>
+			<input type="checkbox" name="sel_plot" value="ir_f">Front Proximity<br>
+			<input type="checkbox" name="sel_plot" value="ir_r">Right Proximity<br>
+			<input type="checkbox" name="sel_plot" value="ir_l">Left Proximity<br>
+		</div>
+	</body>
+</html>

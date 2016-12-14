@@ -1,8 +1,12 @@
 import serial
 import logging
 import time
+import threading
+from status import Status
 
 STOP, GO_FORWARD, TURN_LEFT, TURN_RIGHT = range(4)
+
+data_labels = ['ls_f', 'ls_b', 'ir_f', 'ir_r', 'ir_l', 'ts', 'sm', 'bh', 'gx', 'gy', 'gz']
 
 class Logger(object):
     """ Wrapper Class to Instantiate logger with supplied parameters """
@@ -21,7 +25,7 @@ class Logger(object):
 
         # Write Header
         with open(self.file, 'a') as f:
-            f.write('[time] [LS_f, LS_b, IR_f, IR_r, IR_l, TS, SM]\n')
+            f.write('[time] [' + ', '.join(data_labels)+']\n')
 
         self.ch = logging.FileHandler(self.file)
         self.ch.setFormatter(self.formatter)
@@ -47,6 +51,8 @@ class Turtle(object):
         self.IR = {'front':0, 'right':0, 'left':0} # IR sensor dictionary
         self.TS = 0 # Temperature sensor
         self.SM = 0 # Soil moisture sensor
+        self.behavior = STOP
+        self.GX = self.GY = self.GZ = 0
 
         # Set up limits to look for (filler values)
         self.distanceLimit = 100 # limit before something is 'seen' in that direction
@@ -64,13 +70,15 @@ class Turtle(object):
         self.timeStarted = time.time() # will let us figure out if it is day or night
         self.currentHour = 0
 
+        self.status = [0 for _ in range(len(data_labels))]
+
     def getFirstRead(self):
         """ Gets the first read and sets that as calibration things """
         while True:
             if(self.serial.inWaiting()>0):
                 dataRead = self.serial.readline()
                 dataList = dataRead.split(',')
-                if dataList[0] != '' and len(dataList) == 8:
+                if dataList[0] != '' and len(dataList) == len(data_labels):
                         for index in range(len(dataList)):
                             dataList[index] = float(dataList[index])
                         # Set up calibration for what is defined as shade vs light
@@ -81,16 +89,16 @@ class Turtle(object):
                         print(self.seeLight, self.distanceLimit)
                         break
         
-    def run(self):
+    def run(self, lock):
         """ Loop that runs the decision algorithm """
         while self.serial._isOpen:
             if(self.serial.inWaiting()>0):
                 dataRead = self.serial.readline()
                 dataList = dataRead.split(',')
-                if dataList[0] != '' and len(dataList) == 8: # makes sure it is the full set of data to read
+                if dataList[0] != '' and len(dataList) == len(data_labels): # makes sure it is the full set of data to read
                     self.assignData(dataList)
+                    self.update_status(lock)
                     self.logData()
-                    #print(dataRead)
 
                     # Check to see if we need to go to shade
                     enoughLight = self.checkHourlyLight()
@@ -119,6 +127,7 @@ class Turtle(object):
                 else:
                     #print(dataRead)
                     pass
+            time.sleep(0.05)
 
     def assignData(self, dataList):
         """ Assigns the data to the proper variables and converts it to floats.
@@ -136,6 +145,9 @@ class Turtle(object):
         self.SM = dataList[6]
         self.behavior = dataList[7]
 
+        self.GX = dataList[8]
+        self.GY = dataList[9]
+        self.GZ = dataList[10]
 
     def checkInLight(self):
         """ Checks if the turtle is in light.
@@ -228,10 +240,11 @@ class Turtle(object):
             # goes left if it can't go forward or right. Maybe change later?
             return TURN_LEFT
 
-    def status(self):
-        return [self.LS['front'], self.LS['back'], self.IR['front'], self.IR['right'], self.IR['left'], self.TS, self.SM]
+    def update_status(self, lock):
+        with lock:
+            #print 'got lock2!'
+            self.status = [self.LS['front'], self.LS['back'], self.IR['front'], self.IR['right'], self.IR['left'], self.TS, self.SM, self.behavior, self.GX, self.GY, self.GZ]
 
     def logData(self):
         """ Logs the data into a csv file """
-        dataToLog = self.status()
-        self.logger.log(dataToLog)
+        self.logger.log(self.status)
