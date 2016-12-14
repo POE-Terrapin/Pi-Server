@@ -8,7 +8,6 @@ import threading
 import logging
 
 from turtle import Turtle
-from status import Status
 
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
