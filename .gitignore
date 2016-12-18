@@ -157,3 +157,4 @@ ENV/
 *.exe
 *.out
 *.app
+*.csv

@@ -76,6 +76,7 @@ class Turtle(object):
         while True:
             if(self.serial.inWaiting()>0):
                 dataRead = self.serial.readline()
+                print dataRead
                 dataList = dataRead.split(',')
                 if dataList[0] != '' and len(dataList) == len(data_labels):
                         for index in range(len(dataList)):
@@ -124,7 +125,7 @@ class Turtle(object):
                     self.serial.write(str(direction))
                                        
                 else:
-                    #print(dataRead)
+                    print(dataRead)
                     pass
             time.sleep(0.05)
 
@@ -247,3 +248,11 @@ class Turtle(object):
     def logData(self):
         """ Logs the data into a csv file """
         self.logger.log(self.status)
+
+def main():
+    turtle = Turtle('/dev/ttyACM0', 9600);
+    lock = threading.Lock()
+    turtle.run(lock)
+
+if __name__ == "__main__":
+    main()
